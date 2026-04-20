@@ -1,7 +1,6 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: attractions_mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -14,7 +13,8 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
-    networks: [stack]
+    networks:
+      - stack
 
   phpmyadmin:
     image: arm64v8/phpmyadmin:latest
@@ -25,8 +25,10 @@ services:
       UPLOAD_LIMIT: 256M
     ports:
       - "${PHPMYADMIN_PORT:-8888}:80"
-    depends_on: [mysql]
-    networks: [stack]
+    depends_on:
+      - mysql
+    networks:
+      - stack
 
   api:
     build: ./01_api
@@ -35,28 +37,32 @@ services:
       NODE_ENV: production
       PORT: ${API_PORT}
       DB_HOST: mysql
-      DB_PORT: ${DB_PORT}
+      DB_PORT: 3306
       DB_NAME: ${MYSQL_DATABASE}
       DB_USER: ${MYSQL_USER}
       DB_PASSWORD: ${MYSQL_PASSWORD}
       TZ: Asia/Bangkok
     ports:
       - "${API_PORT:-3001}:3001"
-    depends_on: [mysql]
-    networks: [stack]
+    depends_on:
+      - mysql
+    networks:
+      - stack
 
   frontend:
     build:
       context: ./02_frontend
       args:
-        - API_HOST=${API_HOST:-http://localhost:3001}
+        API_HOST: ${API_HOST:-http://localhost:3001}
     restart: unless-stopped
     environment:
-      - NODE_ENV=production
+      NODE_ENV: production
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
-    depends_on: [api]
-    networks: [stack]
+    depends_on:
+      - api
+    networks:
+      - stack
 
 volumes:
   mysql_data:
