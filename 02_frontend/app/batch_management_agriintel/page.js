@@ -11,51 +11,61 @@ const sidebarItems = [
   { href: "/house_management_agriintel", label: "House Management", icon: "🏠" },
   { href: "/batch_management_agriintel", label: "Batch Management", icon: "🧱" },
   { href: "/employee_management_agriintel", label: "Employee Management", icon: "👨‍🌾" },
-  { href: "/production_management_agriintel", label: "Production", icon: "🥚" },
+  { href: "/production_management_agriintel", label: "Production Management", icon: "🥚" },
+  { href: "/feeding_management_agriintel", label: "Feeding Management", icon: "🌾" },
+  { href: "/environment_management_agriintel", label: "Environment Management", icon: "🌡️" },
+  { href: "/incident_management_agriintel", label: "Incident Management", icon: "⚠️" },
   { href: "/login_agriintel", label: "Logout", icon: "🔐" },
 ];
 
-function getStatusMeta(status = "") {
-  const s = String(status).toLowerCase();
-  if (s.includes("active")) {
-    return { label: "ACTIVE / PEAK", bg: "#dcfce7", color: "#166534", dot: "#16a34a" };
-  }
-  if (s.includes("inactive")) {
-    return { label: "COMPLETED", bg: "#e2e8f0", color: "#475569", dot: "#94a3b8" };
-  }
-  if (s.includes("quarantine")) {
-    return { label: "QUARANTINE", bg: "#fef3c7", color: "#92400e", dot: "#f59e0b" };
-  }
-  return { label: status || "UNKNOWN", bg: "#fee2e2", color: "#991b1b", dot: "#dc2626" };
+function toNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : 0;
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return "-";
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return dateStr;
-  return d.toLocaleDateString();
+  return d.toLocaleDateString("en-GB");
 }
 
-function getHouseCode(houseId) {
-  return `H${String(houseId).padStart(2, "0")}`;
-}
-
-function calcPerformance(initialQty, currentQty) {
-  const init = Number(initialQty || 0);
-  const curr = Number(currentQty || 0);
-  if (!init) return "Standard";
-  const ratio = curr / init;
-  if (ratio >= 0.95) return "High Yield";
-  if (ratio >= 0.85) return "Standard";
-  return "Critical";
-}
-
-function getTelemetry(status) {
+function getStatusMeta(status = "") {
   const s = String(status).toLowerCase();
-  if (s.includes("active")) return { label: "Live Feed", color: "#f59e0b" };
-  if (s.includes("inactive")) return { label: "Standby", color: "#cbd5e1" };
-  if (s.includes("quarantine")) return { label: "Restricted", color: "#f59e0b" };
-  return { label: "Attention", color: "#dc2626" };
+
+  if (s === "active") {
+    return {
+      label: "Active",
+      bg: "#dcfce7",
+      color: "#166534",
+      border: "#bbf7d0",
+    };
+  }
+
+  if (s === "inactive") {
+    return {
+      label: "Completed",
+      bg: "#e2e8f0",
+      color: "#475569",
+      border: "#cbd5e1",
+    };
+  }
+
+  if (s === "quarantine") {
+    return {
+      label: "Quarantine",
+      bg: "#fef3c7",
+      color: "#92400e",
+      border: "#fde68a",
+    };
+  }
+
+  return {
+    label: status || "Unknown",
+    bg: "#fee2e2",
+    color: "#991b1b",
+    border: "#fecaca",
+  };
 }
 
 export default function BatchManagementPage() {
@@ -68,6 +78,15 @@ export default function BatchManagementPage() {
   const [form, setForm] = useState({
     breed: "",
     start_date: new Date().toISOString().slice(0, 10),
+    initial_qty: "",
+    house_id: "",
+  });
+
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState({
+    id: null,
+    breed: "",
+    start_date: "",
     end_date: "",
     status: "active",
     initial_qty: "",
@@ -91,11 +110,27 @@ export default function BatchManagementPage() {
       const batchData = await batchRes.json();
       const houseData = await houseRes.json();
 
-      setBatches(Array.isArray(batchData) ? batchData : []);
-      setHouses(Array.isArray(houseData) ? houseData : []);
+      const safeHouses = Array.isArray(houseData) ? houseData : [];
+      const safeBatches = Array.isArray(batchData) ? batchData : [];
 
-      if (Array.isArray(houseData) && houseData.length > 0 && !form.house_id) {
-        setForm((prev) => ({ ...prev, house_id: String(houseData[0].id) }));
+      const houseMap = new Map(safeHouses.map((h) => [Number(h.id), h.name]));
+
+      const enrichedBatches = safeBatches.map((batch) => ({
+        ...batch,
+        house_name:
+          batch.house_name ||
+          houseMap.get(Number(batch.house_id)) ||
+          `House ID ${batch.house_id}`,
+      }));
+
+      setHouses(safeHouses);
+      setBatches(enrichedBatches);
+
+      if (safeHouses.length > 0 && !form.house_id) {
+        setForm((prev) => ({
+          ...prev,
+          house_id: String(safeHouses[0].id),
+        }));
       }
     } catch (err) {
       setError(err.message || "เกิดข้อผิดพลาด");
@@ -113,18 +148,36 @@ export default function BatchManagementPage() {
       setError("");
       setMessage("");
 
+      if (!form.breed.trim()) {
+        throw new Error("กรุณากรอกสายพันธุ์");
+      }
+
+      if (!form.start_date) {
+        throw new Error("กรุณาเลือกวันที่รับเข้า");
+      }
+
+      if (!form.initial_qty || toNumber(form.initial_qty) <= 0) {
+        throw new Error("กรุณากรอกจำนวนเริ่มต้นให้มากกว่า 0");
+      }
+
+      if (!form.house_id) {
+        throw new Error("กรุณาเลือกโรงเรือน");
+      }
+
+      const initialQty = toNumber(form.initial_qty);
+
       const res = await fetch(`${API}/batch`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          breed: form.breed,
+          breed: form.breed.trim(),
           start_date: form.start_date,
-          end_date: form.end_date || null,
-          status: form.status,
-          initial_qty: Number(form.initial_qty || 0),
-          current_qty: Number(form.current_qty || 0),
+          end_date: null,
+          status: "active",
+          initial_qty: initialQty,
+          current_qty: initialQty,
           house_id: Number(form.house_id),
         }),
       });
@@ -139,11 +192,93 @@ export default function BatchManagementPage() {
       setForm((prev) => ({
         ...prev,
         breed: "",
-        end_date: "",
         initial_qty: "",
-        current_qty: "",
       }));
 
+      await loadData();
+    } catch (err) {
+      setError(err.message || "เกิดข้อผิดพลาด");
+    }
+  }
+
+  function openEdit(batch) {
+    setError("");
+    setMessage("");
+    setEditForm({
+      id: batch.id,
+      breed: batch.breed || "",
+      start_date: batch.start_date ? String(batch.start_date).slice(0, 10) : "",
+      end_date: batch.end_date ? String(batch.end_date).slice(0, 10) : "",
+      status: batch.status || "active",
+      initial_qty: String(batch.initial_qty ?? ""),
+      current_qty: String(batch.current_qty ?? ""),
+      house_id: String(batch.house_id ?? ""),
+    });
+    setEditOpen(true);
+  }
+
+  function closeEdit() {
+    setEditOpen(false);
+    setEditForm({
+      id: null,
+      breed: "",
+      start_date: "",
+      end_date: "",
+      status: "active",
+      initial_qty: "",
+      current_qty: "",
+      house_id: "",
+    });
+  }
+
+  async function saveEdit() {
+    try {
+      setError("");
+      setMessage("");
+
+      if (!editForm.id) {
+        throw new Error("ไม่พบ batch ที่ต้องการแก้ไข");
+      }
+
+      if (!editForm.breed.trim()) {
+        throw new Error("กรุณากรอกสายพันธุ์");
+      }
+
+      if (!editForm.start_date) {
+        throw new Error("กรุณาเลือก start date");
+      }
+
+      if (!editForm.house_id) {
+        throw new Error("กรุณาเลือกโรงเรือน");
+      }
+
+      const res = await fetch(`${API}/batch/${editForm.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          breed: editForm.breed.trim(),
+          start_date: editForm.start_date,
+          end_date: editForm.end_date || null,
+          status: editForm.status,
+          initial_qty: toNumber(editForm.initial_qty),
+          current_qty: toNumber(editForm.current_qty),
+          house_id: Number(editForm.house_id),
+        }),
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        if (res.status === 404 || res.status === 405) {
+          throw new Error("Backend ยังไม่มี PUT /batch/:id สำหรับบันทึกการแก้ไข");
+        }
+        throw new Error(data?.error || "บันทึกการแก้ไขไม่สำเร็จ");
+      }
+
+      setMessage("แก้ไข Batch สำเร็จ");
+      closeEdit();
       await loadData();
     } catch (err) {
       setError(err.message || "เกิดข้อผิดพลาด");
@@ -176,16 +311,20 @@ export default function BatchManagementPage() {
   }
 
   const stats = useMemo(() => {
-    const active = batches.filter((b) =>
-      String(b.status || "").toLowerCase().includes("active")
+    const active = batches.filter(
+      (b) => String(b.status || "").toLowerCase() === "active"
+    ).length;
+
+    const completed = batches.filter(
+      (b) => String(b.status || "").toLowerCase() === "inactive"
     ).length;
 
     const totalPopulation = batches.reduce(
-      (sum, b) => sum + Number(b.current_qty || 0),
+      (sum, b) => sum + toNumber(b.current_qty),
       0
     );
 
-    return { active, totalPopulation };
+    return { active, completed, totalPopulation };
   }, [batches]);
 
   return (
@@ -224,9 +363,10 @@ export default function BatchManagementPage() {
           <div>
             <h1 style={styles.pageTitle}>Batch Management</h1>
             <p style={styles.pageSubtitle}>
-              Orchestrate your poultry cycles with high-precision telemetry and genetic performance tracking.
+              เพิ่มรุ่นไก่ใหม่ให้เรียบง่าย และแก้ไขรายละเอียดภายหลังได้
             </p>
           </div>
+
           <Link href="/dashboard_agriintel" style={styles.backBtn}>
             ← Back to Dashboard
           </Link>
@@ -241,8 +381,12 @@ export default function BatchManagementPage() {
             <div style={styles.kpiValue}>{batches.length}</div>
           </div>
           <div style={styles.kpiCard}>
-            <div style={styles.kpiLabel}>Active Units</div>
+            <div style={styles.kpiLabel}>Active Batches</div>
             <div style={styles.kpiValue}>{stats.active}</div>
+          </div>
+          <div style={styles.kpiCard}>
+            <div style={styles.kpiLabel}>Completed</div>
+            <div style={styles.kpiValue}>{stats.completed}</div>
           </div>
           <div style={styles.kpiCard}>
             <div style={styles.kpiLabel}>Total Population</div>
@@ -251,232 +395,290 @@ export default function BatchManagementPage() {
         </section>
 
         <section style={styles.formCard}>
-          <div style={styles.tableHeader}>
-            <h2 style={styles.sectionTitle}>Add New Batch</h2>
-            <span style={styles.badge}>Create record</span>
+          <div style={styles.sectionHead}>
+            <div>
+              <h2 style={styles.sectionTitle}>Add New Batch</h2>
+              <p style={styles.sectionDesc}>
+                ตอนรับไก่เข้า กรอกแค่ข้อมูลหลักก่อน ระบบจะตั้ง Current Qty เท่ากับ
+                Initial Qty และสถานะเป็น Active ให้อัตโนมัติ
+              </p>
+            </div>
+            <span style={styles.badge}>Simple create</span>
           </div>
 
           <div style={styles.formGrid}>
-            <input
-              type="text"
-              placeholder="Breed"
-              value={form.breed}
-              onChange={(e) => setForm({ ...form, breed: e.target.value })}
-              style={styles.input}
-            />
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Breed</label>
+              <input
+                type="text"
+                placeholder="เช่น Hy-Line Brown"
+                value={form.breed}
+                onChange={(e) => setForm({ ...form, breed: e.target.value })}
+                style={styles.input}
+              />
+            </div>
 
-            <input
-              type="date"
-              value={form.start_date}
-              onChange={(e) => setForm({ ...form, start_date: e.target.value })}
-              style={styles.input}
-            />
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Start Date</label>
+              <input
+                type="date"
+                value={form.start_date}
+                onChange={(e) => setForm({ ...form, start_date: e.target.value })}
+                style={styles.input}
+              />
+            </div>
 
-            <input
-              type="date"
-              value={form.end_date}
-              onChange={(e) => setForm({ ...form, end_date: e.target.value })}
-              style={styles.input}
-            />
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>Initial Qty</label>
+              <input
+                type="number"
+                min="1"
+                placeholder="จำนวนไก่ที่รับเข้า"
+                value={form.initial_qty}
+                onChange={(e) => setForm({ ...form, initial_qty: e.target.value })}
+                style={styles.input}
+              />
+            </div>
 
-            <select
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-              style={styles.input}
-            >
-              <option value="active">active</option>
-              <option value="inactive">inactive</option>
-              <option value="quarantine">quarantine</option>
-            </select>
+            <div style={styles.fieldGroup}>
+              <label style={styles.label}>House</label>
+              <select
+                value={form.house_id}
+                onChange={(e) => setForm({ ...form, house_id: e.target.value })}
+                style={styles.input}
+              >
+                {houses.length === 0 ? (
+                  <option value="">No house found</option>
+                ) : (
+                  houses.map((house) => (
+                    <option key={house.id} value={house.id}>
+                      {house.name} (ID: {house.id})
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
 
-            <input
-              type="number"
-              placeholder="Initial Qty"
-              value={form.initial_qty}
-              onChange={(e) => setForm({ ...form, initial_qty: e.target.value })}
-              style={styles.input}
-            />
-
-            <input
-              type="number"
-              placeholder="Current Qty"
-              value={form.current_qty}
-              onChange={(e) => setForm({ ...form, current_qty: e.target.value })}
-              style={styles.input}
-            />
-
-            <select
-              value={form.house_id}
-              onChange={(e) => setForm({ ...form, house_id: e.target.value })}
-              style={styles.input}
-            >
-              {houses.length === 0 ? (
-                <option value="">No house found</option>
-              ) : (
-                houses.map((house) => (
-                  <option key={house.id} value={house.id}>
-                    {house.name} (ID: {house.id})
-                  </option>
-                ))
-              )}
-            </select>
+          <div style={styles.noteRow}>
+            <span style={styles.noteChip}>Status: active</span>
+            <span style={styles.noteChip}>
+              Current Qty: {form.initial_qty || 0}
+            </span>
+            <span style={styles.noteChip}>End Date: ยังไม่ต้องกรอก</span>
           </div>
 
           <button
             onClick={addBatch}
             style={styles.addBtn}
-            disabled={!form.breed || !form.start_date || !form.status || !form.house_id}
+            disabled={!form.breed || !form.start_date || !form.initial_qty || !form.house_id}
           >
             + Add Batch
           </button>
         </section>
 
-        <section style={styles.card}>
-          <div style={styles.tableHeader}>
-            <h2 style={styles.sectionTitle}>Flock Batches</h2>
+        <section style={styles.tableCard}>
+          <div style={styles.sectionHead}>
+            <div>
+              <h2 style={styles.sectionTitle}>Batch Records</h2>
+              <p style={styles.sectionDesc}>
+                จัดการรุ่นไก่ที่มีอยู่ และแก้ไขข้อมูลภายหลังด้วยปุ่ม Edit
+              </p>
+            </div>
             <span style={styles.badge}>{batches.length} records</span>
           </div>
 
           {loading ? (
-            <div style={styles.loading}>Loading flock data...</div>
+            <div style={styles.loading}>Loading batch data...</div>
           ) : batches.length === 0 ? (
             <div style={styles.loading}>No batch data found.</div>
           ) : (
-            <div style={styles.batchGrid}>
-              {batches.map((batch) => {
-                const meta = getStatusMeta(batch.status);
-                const perf = calcPerformance(batch.initial_qty, batch.current_qty);
-                const tele = getTelemetry(batch.status);
-                const ratio =
-                  Number(batch.initial_qty || 0) > 0
-                    ? Math.min((Number(batch.current_qty || 0) / Number(batch.initial_qty || 1)) * 100, 100)
-                    : 0;
+            <div style={{ overflowX: "auto" }}>
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>ID</th>
+                    <th style={styles.th}>Breed</th>
+                    <th style={styles.th}>House</th>
+                    <th style={styles.th}>Start Date</th>
+                    <th style={styles.th}>End Date</th>
+                    <th style={styles.th}>Initial Qty</th>
+                    <th style={styles.th}>Current Qty</th>
+                    <th style={styles.th}>Status</th>
+                    <th style={styles.th}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {batches.map((batch) => {
+                    const statusMeta = getStatusMeta(batch.status);
 
-                return (
-                  <div key={batch.id} style={styles.batchCard}>
-                    <div style={{ ...styles.batchAccent, background: meta.dot }} />
-
-                    <div style={styles.batchCardTop}>
-                      <div>
-                        <div style={styles.smallLabel}>BATCH {batch.id}</div>
-                        <div style={styles.batchTitle}>House {getHouseCode(batch.house_id)}</div>
-                      </div>
-
-                      <div style={styles.cardRight}>
-                        <div style={{ ...styles.statusTag, background: meta.bg, color: meta.color }}>
-                          <span style={{ ...styles.statusDot, background: meta.dot }} />
-                          {meta.label}
-                        </div>
-                        <button
-                          onClick={() => deleteBatch(batch.id)}
-                          style={styles.deleteBtn}
-                          title="Delete Batch"
-                        >
-                          🗑️
-                        </button>
-                      </div>
-                    </div>
-
-                    <div style={styles.statsRow}>
-                      <div style={styles.statItem}>
-                        <span style={styles.statLabel}>Current Population</span>
-                        <span style={styles.statValue}>{Number(batch.current_qty || 0).toLocaleString()}</span>
-                      </div>
-                      <div style={styles.statItem}>
-                        <span style={styles.statLabel}>Performance</span>
-                        <span
-                          style={{
-                            ...styles.statValue,
-                            color: perf === "Critical" ? "#dc2626" : "#0f5c2e",
-                          }}
-                        >
-                          {perf}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div style={styles.infoList}>
-                      <div style={styles.infoLine}>
-                        <span>📅 Start Date:</span>
-                        <strong>{formatDate(batch.start_date)}</strong>
-                      </div>
-                      <div style={styles.infoLine}>
-                        <span>📅 End Date:</span>
-                        <strong>{formatDate(batch.end_date)}</strong>
-                      </div>
-                      <div style={styles.infoLine}>
-                        <span>📡 Telemetry:</span>
-                        <span style={{ color: tele.color, fontWeight: 700 }}>● {tele.label}</span>
-                      </div>
-                    </div>
-
-                    <div style={styles.progressTrack}>
-                      <div
-                        style={{
-                          ...styles.progressFill,
-                          width: `${ratio}%`,
-                          background: meta.dot,
-                        }}
-                      />
-                    </div>
-
-                    <div style={styles.batchFooter}>
-                      <button style={styles.actionBtn}>Edit</button>
-                      <button style={styles.viewLink}>Performance Report →</button>
-                    </div>
-                  </div>
-                );
-              })}
+                    return (
+                      <tr key={batch.id}>
+                        <td style={styles.td}>#{batch.id}</td>
+                        <td style={styles.tdStrong}>{batch.breed || "-"}</td>
+                        <td style={styles.td}>{batch.house_name || "-"}</td>
+                        <td style={styles.td}>{formatDate(batch.start_date)}</td>
+                        <td style={styles.td}>{formatDate(batch.end_date)}</td>
+                        <td style={styles.td}>{toNumber(batch.initial_qty).toLocaleString()}</td>
+                        <td style={styles.td}>{toNumber(batch.current_qty).toLocaleString()}</td>
+                        <td style={styles.td}>
+                          <span
+                            style={{
+                              ...styles.statusPill,
+                              background: statusMeta.bg,
+                              color: statusMeta.color,
+                              borderColor: statusMeta.border,
+                            }}
+                          >
+                            {statusMeta.label}
+                          </span>
+                        </td>
+                        <td style={styles.td}>
+                          <div style={styles.actionRow}>
+                            <button
+                              onClick={() => openEdit(batch)}
+                              style={styles.editBtn}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => deleteBatch(batch.id)}
+                              style={styles.deleteBtn}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </section>
-
-        <section style={styles.tableCard}>
-          <div style={styles.tableHeader}>
-            <h2 style={styles.sectionTitle}>Detailed Records</h2>
-          </div>
-
-          <div style={{ overflowX: "auto" }}>
-            <table style={styles.table}>
-              <thead>
-                <tr>
-                  <th style={styles.th}>ID</th>
-                  <th style={styles.th}>House</th>
-                  <th style={styles.th}>Breed</th>
-                  <th style={styles.th}>Initial</th>
-                  <th style={styles.th}>Current</th>
-                  <th style={styles.th}>Status</th>
-                  <th style={styles.th}>Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {batches.map((b) => (
-                  <tr key={b.id}>
-                    <td style={styles.td}>#{b.id}</td>
-                    <td style={styles.td}>{getHouseCode(b.house_id)}</td>
-                    <td style={styles.td}>{b.breed || "-"}</td>
-                    <td style={styles.td}>{b.initial_qty}</td>
-                    <td style={styles.td}>{b.current_qty}</td>
-                    <td style={styles.td}>
-                      <span style={{ color: getStatusMeta(b.status).color, fontWeight: 700 }}>
-                        {b.status}
-                      </span>
-                    </td>
-                    <td style={styles.td}>
-                      <button
-                        onClick={() => deleteBatch(b.id)}
-                        style={styles.tableDeleteBtn}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
       </main>
+
+      {editOpen ? (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalCard}>
+            <div style={styles.modalHead}>
+              <div>
+                <h3 style={styles.modalTitle}>Edit Batch #{editForm.id}</h3>
+                <p style={styles.modalDesc}>แก้ไขข้อมูลรุ่นไก่</p>
+              </div>
+              <button onClick={closeEdit} style={styles.closeBtn}>
+                ✕
+              </button>
+            </div>
+
+            <div style={styles.editGrid}>
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Breed</label>
+                <input
+                  type="text"
+                  value={editForm.breed}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, breed: e.target.value })
+                  }
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>House</label>
+                <select
+                  value={editForm.house_id}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, house_id: e.target.value })
+                  }
+                  style={styles.input}
+                >
+                  {houses.map((house) => (
+                    <option key={house.id} value={house.id}>
+                      {house.name} (ID: {house.id})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Start Date</label>
+                <input
+                  type="date"
+                  value={editForm.start_date}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, start_date: e.target.value })
+                  }
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>End Date</label>
+                <input
+                  type="date"
+                  value={editForm.end_date}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, end_date: e.target.value })
+                  }
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Status</label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, status: e.target.value })
+                  }
+                  style={styles.input}
+                >
+                  <option value="active">active</option>
+                  <option value="inactive">inactive</option>
+                  <option value="quarantine">quarantine</option>
+                </select>
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Initial Qty</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editForm.initial_qty}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, initial_qty: e.target.value })
+                  }
+                  style={styles.input}
+                />
+              </div>
+
+              <div style={styles.fieldGroup}>
+                <label style={styles.label}>Current Qty</label>
+                <input
+                  type="number"
+                  min="0"
+                  value={editForm.current_qty}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, current_qty: e.target.value })
+                  }
+                  style={styles.input}
+                />
+              </div>
+            </div>
+
+            <div style={styles.modalActions}>
+              <button onClick={closeEdit} style={styles.cancelBtn}>
+                Cancel
+              </button>
+              <button onClick={saveEdit} style={styles.saveBtn}>
+                Save Changes
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -623,33 +825,32 @@ const styles = {
     boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
     marginBottom: 22,
   },
-  card: {
-    background: "#ffffff",
-    borderRadius: 18,
-    padding: 22,
-    boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-    marginBottom: 22,
-  },
   tableCard: {
     background: "#ffffff",
     borderRadius: 18,
     padding: 22,
     boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-    marginBottom: 22,
+  },
+  sectionHead: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 16,
+    marginBottom: 18,
+    flexWrap: "wrap",
   },
   sectionTitle: {
-    margin: "0 0 18px",
+    margin: 0,
     fontSize: 24,
     fontWeight: 800,
     color: "#0f172a",
   },
-  tableHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-    gap: 12,
-    flexWrap: "wrap",
+  sectionDesc: {
+    margin: "6px 0 0",
+    color: "#64748b",
+    fontSize: 14,
+    lineHeight: 1.6,
+    maxWidth: 720,
   },
   badge: {
     background: "#e2e8f0",
@@ -661,9 +862,19 @@ const styles = {
   },
   formGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
-    gap: 12,
-    marginBottom: 16,
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 14,
+    marginBottom: 14,
+  },
+  fieldGroup: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 8,
+  },
+  label: {
+    fontSize: 13,
+    color: "#475569",
+    fontWeight: 700,
   },
   input: {
     width: "100%",
@@ -672,6 +883,21 @@ const styles = {
     border: "1px solid #d1d5db",
     background: "#f8fafc",
     fontSize: 14,
+    outline: "none",
+  },
+  noteRow: {
+    display: "flex",
+    gap: 10,
+    flexWrap: "wrap",
+    marginBottom: 16,
+  },
+  noteChip: {
+    background: "#f1f5f9",
+    color: "#475569",
+    borderRadius: 999,
+    padding: "8px 12px",
+    fontSize: 13,
+    fontWeight: 700,
   },
   addBtn: {
     background: "#0f5c2e",
@@ -682,148 +908,10 @@ const styles = {
     fontWeight: 700,
     cursor: "pointer",
   },
-  batchGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
-    gap: 20,
-  },
-  batchCard: {
-    position: "relative",
-    background: "#fdfdfd",
-    borderRadius: 22,
-    padding: 22,
-    boxShadow: "0 4px 16px rgba(0,0,0,0.06)",
-    overflow: "hidden",
-  },
-  batchAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    width: 8,
-    height: "100%",
-  },
-  batchCardTop: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 20,
-    gap: 12,
-  },
-  cardRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    flexWrap: "wrap",
-    justifyContent: "flex-end",
-  },
-  smallLabel: {
-    fontSize: 11,
-    fontWeight: 700,
-    color: "#94a3b8",
-    letterSpacing: 0.8,
-    marginBottom: 8,
-  },
-  batchTitle: {
-    fontSize: 22,
-    fontWeight: 800,
-    color: "#0f172a",
-  },
-  statusTag: {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    padding: "6px 12px",
-    borderRadius: 12,
-    fontSize: 12,
-    fontWeight: 700,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: "50%",
-  },
-  statsRow: {
-    display: "flex",
-    gap: 20,
-    background: "#f8fafc",
-    padding: 16,
-    borderRadius: 16,
-    marginBottom: 16,
-  },
-  statItem: {
-    flex: 1,
-  },
-  statLabel: {
-    display: "block",
-    fontSize: 11,
-    color: "#64748b",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: 800,
-    color: "#0f172a",
-  },
-  infoList: {
-    marginBottom: 16,
-  },
-  infoLine: {
-    display: "flex",
-    justifyContent: "space-between",
-    gap: 12,
-    fontSize: 14,
-    padding: "4px 0",
-  },
-  progressTrack: {
-    width: "100%",
-    height: 10,
-    background: "#e2e8f0",
-    borderRadius: 999,
-    overflow: "hidden",
-    marginBottom: 20,
-  },
-  progressFill: {
-    height: "100%",
-    borderRadius: 999,
-  },
-  batchFooter: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 12,
-    flexWrap: "wrap",
-  },
-  actionBtn: {
-    background: "#f1f5f9",
-    border: "none",
-    padding: "8px 16px",
-    borderRadius: 8,
-    fontWeight: 700,
-    cursor: "pointer",
-    color: "#475569",
-  },
-  viewLink: {
-    fontSize: 14,
-    color: "#166534",
-    fontWeight: 700,
-    cursor: "pointer",
-    border: "none",
-    background: "none",
-  },
-  deleteBtn: {
-    border: "none",
-    background: "#fee2e2",
-    color: "#991b1b",
-    borderRadius: 10,
-    padding: "8px 10px",
-    cursor: "pointer",
-    fontWeight: 700,
-  },
   table: {
     width: "100%",
     borderCollapse: "collapse",
+    minWidth: 980,
   },
   th: {
     textAlign: "left",
@@ -832,13 +920,44 @@ const styles = {
     color: "#64748b",
     fontSize: 13,
     textTransform: "uppercase",
+    whiteSpace: "nowrap",
   },
   td: {
     padding: "14px 10px",
     borderBottom: "1px solid #f1f5f9",
-    fontSize: 15,
+    fontSize: 14,
+    verticalAlign: "middle",
   },
-  tableDeleteBtn: {
+  tdStrong: {
+    padding: "14px 10px",
+    borderBottom: "1px solid #f1f5f9",
+    fontSize: 14,
+    fontWeight: 700,
+  },
+  statusPill: {
+    display: "inline-flex",
+    alignItems: "center",
+    borderRadius: 999,
+    padding: "6px 10px",
+    fontSize: 12,
+    fontWeight: 700,
+    border: "1px solid",
+  },
+  actionRow: {
+    display: "flex",
+    gap: 8,
+    flexWrap: "wrap",
+  },
+  editBtn: {
+    background: "#e0f2fe",
+    color: "#075985",
+    border: "none",
+    borderRadius: 10,
+    padding: "8px 12px",
+    cursor: "pointer",
+    fontWeight: 700,
+  },
+  deleteBtn: {
     background: "#fee2e2",
     color: "#991b1b",
     border: "none",
@@ -852,5 +971,81 @@ const styles = {
     textAlign: "center",
     color: "#64748b",
     fontWeight: 600,
+  },
+  modalOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(15,23,42,0.45)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+    zIndex: 1000,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 860,
+    background: "#ffffff",
+    borderRadius: 20,
+    padding: 22,
+    boxShadow: "0 20px 40px rgba(0,0,0,0.18)",
+  },
+  modalHead: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: 12,
+    marginBottom: 18,
+  },
+  modalTitle: {
+    margin: 0,
+    fontSize: 24,
+    fontWeight: 800,
+    color: "#0f172a",
+  },
+  modalDesc: {
+    margin: "6px 0 0",
+    color: "#64748b",
+    fontSize: 14,
+  },
+  closeBtn: {
+    background: "#f1f5f9",
+    color: "#475569",
+    border: "none",
+    borderRadius: 10,
+    width: 36,
+    height: 36,
+    cursor: "pointer",
+    fontWeight: 700,
+  },
+  editGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: 14,
+    marginBottom: 18,
+  },
+  modalActions: {
+    display: "flex",
+    justifyContent: "flex-end",
+    gap: 10,
+    flexWrap: "wrap",
+  },
+  cancelBtn: {
+    background: "#f1f5f9",
+    color: "#475569",
+    border: "none",
+    borderRadius: 12,
+    padding: "12px 16px",
+    cursor: "pointer",
+    fontWeight: 700,
+  },
+  saveBtn: {
+    background: "#0f5c2e",
+    color: "#fff",
+    border: "none",
+    borderRadius: 12,
+    padding: "12px 16px",
+    cursor: "pointer",
+    fontWeight: 700,
   },
 };

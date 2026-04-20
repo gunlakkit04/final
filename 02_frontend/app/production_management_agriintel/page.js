@@ -11,7 +11,10 @@ const sidebarItems = [
   { href: "/house_management_agriintel", label: "House Management", icon: "🏠" },
   { href: "/batch_management_agriintel", label: "Batch Management", icon: "🧱" },
   { href: "/employee_management_agriintel", label: "Employee Management", icon: "👨‍🌾" },
-  { href: "/production_management_agriintel", label: "Production", icon: "🥚" },
+  { href: "/production_management_agriintel", label: "Production Management", icon: "🥚" },
+  { href: "/feeding_management_agriintel", label: "Feeding Management", icon: "🌾" },
+  { href: "/environment_management_agriintel", label: "Environment Management", icon: "🌡️" },
+  { href: "/incident_management_agriintel", label: "Incident Management", icon: "⚠️" },
   { href: "/login_agriintel", label: "Logout", icon: "🔐" },
 ];
 
