@@ -94,7 +94,15 @@ export default function LoginPage() {
               />
             </div>
 
-            <button type="submit" style={styles.loginBtn} disabled={loading}>
+            <button
+              type="submit"
+              style={{
+                ...styles.loginBtn,
+                opacity: loading ? 0.7 : 1,
+                cursor: loading ? "not-allowed" : "pointer",
+              }}
+              disabled={loading}
+            >
               {loading ? "Signing in..." : "Sign In"}
             </button>
 
@@ -115,11 +123,26 @@ export default function LoginPage() {
               and production in one place.
             </p>
 
-            <div style={styles.featureList}>
-              <div style={styles.featureItem}>✅ Farm & House Tracking</div>
-              <div style={styles.featureItem}>✅ Feeding & Environment Logs</div>
-              <div style={styles.featureItem}>✅ Production & Incident Records</div>
-              <div style={styles.featureItem}>✅ Role-based User Access</div>
+            <div style={styles.featureFrame}>
+              <div style={styles.featureItem}>
+                <span style={styles.checkIcon}>✅</span>
+                <span>Farm &amp; House Tracking</span>
+              </div>
+
+              <div style={styles.featureItem}>
+                <span style={styles.checkIcon}>✅</span>
+                <span>Feeding &amp; Environment Logs</span>
+              </div>
+
+              <div style={styles.featureItem}>
+                <span style={styles.checkIcon}>✅</span>
+                <span>Production &amp; Incident Records</span>
+              </div>
+
+              <div style={styles.featureItem}>
+                <span style={styles.checkIcon}>✅</span>
+                <span>Role-based User Access</span>
+              </div>
             </div>
           </div>
         </div>
@@ -134,7 +157,7 @@ const styles = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    background: "linear-gradient(135deg, #eef5f9 0%, #d8ecf5 100%)",
+    background: "linear-gradient(135deg, #f8f9ee 0%, #d8ecf5 100%)",
     padding: "24px",
     fontFamily: "Arial, Helvetica, sans-serif",
   },
@@ -157,15 +180,16 @@ const styles = {
     background: "#ffffff",
   },
   rightPanel: {
-    background: "linear-gradient(135deg, #0f5c2e 0%, #1f7a41 100%)",
-    color: "#fff",
+    background: "linear-gradient(135deg, #f8df95 0%, #fccf55 100%)",
+    color: "#000000",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: "48px",
   },
   rightContent: {
-    maxWidth: "420px",
+    maxWidth: "430px",
+    width: "100%",
   },
   brandBox: {
     display: "flex",
@@ -177,17 +201,17 @@ const styles = {
     width: 54,
     height: 54,
     borderRadius: 16,
-    background: "#0f5c2e",
+    background: "#fee7aa",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
+    color: "#000000",
     fontSize: 26,
   },
   brandTitle: {
     fontSize: 34,
     fontWeight: 800,
-    color: "#0b3d1d",
+    color: "#000000",
     lineHeight: 1,
   },
   brandSub: {
@@ -235,14 +259,13 @@ const styles = {
   },
   loginBtn: {
     marginTop: 8,
-    background: "#0f5c2e",
-    color: "#fff",
+    background: "#f8df95",
+    color: "#000000",
     border: "none",
     borderRadius: 12,
     padding: "14px 18px",
     fontWeight: 700,
     fontSize: 16,
-    cursor: "pointer",
   },
   errorBox: {
     background: "#fee2e2",
@@ -258,7 +281,7 @@ const styles = {
     fontSize: 14,
   },
   link: {
-    color: "#0f5c2e",
+    color: "#000000",
     fontWeight: 700,
     textDecoration: "none",
   },
@@ -273,15 +296,28 @@ const styles = {
     opacity: 0.95,
     marginBottom: 28,
   },
-  featureList: {
+  featureFrame: {
     display: "flex",
     flexDirection: "column",
     gap: 14,
+    background: "rgba(255,255,255,0.16)",
+    border: "1px solid rgba(255,255,255,0.38)",
+    borderRadius: 24,
+    padding: 22,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.14)",
   },
   featureItem: {
-    background: "rgba(255,255,255,0.12)",
-    padding: "14px 16px",
-    borderRadius: 12,
-    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    background: "rgba(255,255,255,0.18)",
+    padding: "15px 16px",
+    borderRadius: 14,
+    fontWeight: 800,
+    color: "#000000",
+  },
+  checkIcon: {
+    fontSize: 18,
+    lineHeight: 1,
   },
 };

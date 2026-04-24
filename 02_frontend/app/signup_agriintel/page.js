@@ -36,9 +36,7 @@ export default function SignupPage() {
       setError("");
 
       const res = await fetch(`${API}/farm`, { cache: "no-store" });
-      if (!res.ok) {
-        throw new Error("โหลดรายชื่อฟาร์มไม่สำเร็จ");
-      }
+      if (!res.ok) throw new Error("โหลดรายชื่อฟาร์มไม่สำเร็จ");
 
       const data = await res.json();
       setFarms(Array.isArray(data) ? data : []);
@@ -96,6 +94,7 @@ export default function SignupPage() {
       }
 
       setMessage("สมัครสมาชิกสำเร็จ กำลังพาไปหน้า Login...");
+
       setForm({
         username: "",
         password: "",
@@ -244,7 +243,11 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              style={styles.primaryBtn}
+              style={{
+                ...styles.primaryBtn,
+                opacity: submitting ? 0.7 : 1,
+                cursor: submitting ? "not-allowed" : "pointer",
+              }}
               disabled={submitting}
             >
               {submitting ? "Creating account..." : "Sign Up"}
@@ -266,11 +269,26 @@ export default function SignupPage() {
               Create user account and employee profile in one step
             </p>
 
-            <div style={styles.featureList}>
-              <div style={styles.featureItem}>✅ No employee dropdown</div>
-              <div style={styles.featureItem}>✅ Create employee automatically</div>
-              <div style={styles.featureItem}>✅ Choose role and position</div>
-              <div style={styles.featureItem}>✅ Ready for login immediately</div>
+            <div style={styles.featureFrame}>
+              <div style={styles.featureItem}>
+                <span style={styles.checkIcon}>✅</span>
+                <span>No employee dropdown</span>
+              </div>
+
+              <div style={styles.featureItem}>
+                <span style={styles.checkIcon}>✅</span>
+                <span>Create employee automatically</span>
+              </div>
+
+              <div style={styles.featureItem}>
+                <span style={styles.checkIcon}>✅</span>
+                <span>Choose role and position</span>
+              </div>
+
+              <div style={styles.featureItem}>
+                <span style={styles.checkIcon}>✅</span>
+                <span>Ready for login immediately</span>
+              </div>
             </div>
           </div>
         </div>
@@ -308,14 +326,17 @@ const styles = {
     background: "#ffffff",
   },
   rightPanel: {
-    background: "linear-gradient(135deg, #0f5c2e 0%, #1f7a41 100%)",
-    color: "#fff",
+    background: "linear-gradient(135deg, #f8df95 0%, #fccf55 100%)",
+    color: "#000000",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     padding: "48px",
   },
-  rightContent: { maxWidth: "420px" },
+  rightContent: {
+    maxWidth: "430px",
+    width: "100%",
+  },
   brandBox: {
     display: "flex",
     gap: 12,
@@ -326,17 +347,16 @@ const styles = {
     width: 54,
     height: 54,
     borderRadius: 16,
-    background: "#0f5c2e",
+    background: "#fee7aa",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    color: "#fff",
     fontSize: 26,
   },
   brandTitle: {
     fontSize: 34,
     fontWeight: 800,
-    color: "#0b3d1d",
+    color: "#000000",
     lineHeight: 1,
   },
   brandSub: {
@@ -384,14 +404,13 @@ const styles = {
   },
   primaryBtn: {
     marginTop: 8,
-    background: "#0f5c2e",
-    color: "#fff",
+    background: "#f8df95",
+    color: "#000000",
     border: "none",
     borderRadius: 12,
     padding: "14px 18px",
     fontWeight: 700,
     fontSize: 16,
-    cursor: "pointer",
   },
   errorBox: {
     background: "#fee2e2",
@@ -403,7 +422,7 @@ const styles = {
   },
   successBox: {
     background: "#dcfce7",
-    color: "#166534",
+    color: "#000000",
     padding: 14,
     borderRadius: 12,
     marginBottom: 18,
@@ -415,7 +434,7 @@ const styles = {
     fontSize: 14,
   },
   link: {
-    color: "#0f5c2e",
+    color: "#000000",
     fontWeight: 700,
     textDecoration: "none",
   },
@@ -430,15 +449,28 @@ const styles = {
     opacity: 0.95,
     marginBottom: 28,
   },
-  featureList: {
+  featureFrame: {
     display: "flex",
     flexDirection: "column",
     gap: 14,
+    background: "rgba(255,255,255,0.16)",
+    border: "1px solid rgba(255,255,255,0.38)",
+    borderRadius: 24,
+    padding: 22,
+    boxShadow: "0 18px 40px rgba(0,0,0,0.14)",
   },
   featureItem: {
-    background: "rgba(255,255,255,0.12)",
-    padding: "14px 16px",
-    borderRadius: 12,
-    fontWeight: 600,
+    display: "flex",
+    alignItems: "center",
+    gap: 12,
+    background: "rgba(255,255,255,0.18)",
+    padding: "15px 16px",
+    borderRadius: 14,
+    fontWeight: 800,
+    color: "#000000",
+  },
+  checkIcon: {
+    fontSize: 18,
+    lineHeight: 1,
   },
 };

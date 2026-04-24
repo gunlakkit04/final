@@ -371,8 +371,8 @@ export default function DashboardPage() {
         <section style={styles.kpiGrid}>
           <div style={styles.kpiCard}>
             <div style={styles.kpiLabel}>TOTAL FARMS</div>
-            <div style={{ ...styles.kpiValue, color: "#0f7a3a" }}>
-              {loading ? "--" : String(stats.totalFarms).padStart(2, "0")}
+            <div style={{ ...styles.kpiValue, color: "#000000" }}>
+              {loading ? "--" : String(stats.totalFarms).padStart(2)}
             </div>
           </div>
 
@@ -423,7 +423,7 @@ export default function DashboardPage() {
                             style={{
                               ...styles.barFill,
                               height: `${barHeight}px`,
-                              background: isLast ? "#166534" : "#cbd5e1",
+                              background: isLast ? "#fccf55" : "#cbd5e1",
                             }}
                           />
                         </div>
@@ -575,7 +575,7 @@ const styles = {
     width: 48,
     height: 48,
     borderRadius: 14,
-    background: "#0f5c2e",
+    background: "#fee7aa",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -585,7 +585,7 @@ const styles = {
   brandTitle: {
     fontSize: 28,
     fontWeight: 800,
-    color: "#0b3d1d",
+    color: "#000000",
     lineHeight: 1,
   },
   brandSub: {
@@ -609,8 +609,8 @@ const styles = {
     fontSize: 15,
   },
   navItemActive: {
-    background: "#0f5c2e",
-    color: "#fff",
+    background: "#f8df95",
+    color: "#000000 ",
   },
   navButton: {
     width: "100%",
@@ -650,7 +650,7 @@ const styles = {
   },
   todayBtn: {
     textDecoration: "none",
-    color: "#0f5c2e",
+    color: "#000000",
     fontWeight: 700,
     background: "#e5f4ea",
     padding: "10px 14px",
@@ -819,10 +819,10 @@ const styles = {
   houseProgressFill: {
     height: "100%",
     borderRadius: 999,
-    background: "#166534",
+    background: "#fccf55",
   },
   detailLink: {
-    color: "#166534",
+    color: "#000000",
     fontWeight: 700,
     fontSize: 14,
     whiteSpace: "nowrap",
@@ -864,7 +864,7 @@ const styles = {
     marginLeft: 18,
   },
   quickCard: {
-    background: "#0f5c2e",
+    background: "#ddb64b",
     color: "#fff",
     borderRadius: 18,
     padding: 20,

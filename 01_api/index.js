@@ -1243,3 +1243,7 @@ app.put("/batch/:id", async (req, res) => {
     res.status(500).json({ error: e.message });
   }
 });
+
+app.get("/", (req, res) => {
+  res.send("API ทำงานแล้ว 🚀");
+});

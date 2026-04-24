@@ -537,7 +537,7 @@ const styles = {
     width: 48,
     height: 48,
     borderRadius: 14,
-    background: "#0f5c2e",
+    background: "#fee7aa",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -547,7 +547,7 @@ const styles = {
   brandTitle: {
     fontSize: 28,
     fontWeight: 800,
-    color: "#0b3d1d",
+    color: "#000000",
     lineHeight: 1,
   },
   brandSub: {
@@ -571,8 +571,8 @@ const styles = {
     fontSize: 15,
   },
   navItemActive: {
-    background: "#0f5c2e",
-    color: "#fff",
+    background: "#f8df95",
+    color: "#000000",
   },
   main: {
     flex: 1,
@@ -599,7 +599,7 @@ const styles = {
   },
   backBtn: {
     textDecoration: "none",
-    color: "#0f5c2e",
+    color: "#000000",
     fontWeight: 700,
     background: "#e5f4ea",
     padding: "10px 14px",
@@ -686,7 +686,7 @@ const styles = {
     outline: "none",
   },
   primaryBtn: {
-    background: "#0f5c2e",
+    background: "#000000",
     color: "#fff",
     border: "none",
     borderRadius: 12,
